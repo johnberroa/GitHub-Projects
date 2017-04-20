@@ -4,7 +4,7 @@ This program is intended to be an environment to test various learning algorithm
 
 Learning Algorithms:
 Artificial Neural Network
-Reinforcement Learning (which type yet I have no decided, but should be able to do multiple)
+Reinforcement Learning (which type yet I have not yet decided, but should be able to do multiple)
 
-Genearlity Test:
+Generality Test:
 Will be able to switch which variable the algorithm controls.  In this way, a trained network on one variable can be tested to see if it genearlizes/learns faster for a new variable. (e.g. angle then to projectile mass).
