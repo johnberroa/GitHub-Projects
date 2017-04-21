@@ -14,23 +14,17 @@ class Artillery:
     """
 
     def __init__(self):
-        self.force = 1000  # newtons????? of force
-        self.angle = 45
-        self.contactTime = .1  # seconds
+        self.force = 1000000  # newtons
+        self.angle = 60  # degrees
+        self.contactTime = .0001  # seconds
         self.shellWeight = 10  # kilograms
-        self.height = 0  # meters (0 currently for ease of calculation)
+
         # def changeAngle(self):
         # changes the barrel angle
 
     def shoot(self):
-        acceleration = self.force / self.shellWeight
-        speed = acceleration / self.shellWeight  # (F*t)/m or v = at
-        thirdAngle = 180 - 90 - self.angle
-        equal = speed / np.sin(90)
-        verticalSpeed = equal * np.sin(self.angle)
-        horizontalSpeed = equal * np.cos(thirdAngle)
-        print(horizontalSpeed, verticalSpeed, 'h,v')  # debugging
-        return verticalSpeed, horizontalSpeed, self.height
+        speed = (self.force * self.contactTime) / self.shellWeight
+        return speed, self.angle
 
 
 class Target:
@@ -38,23 +32,30 @@ class Target:
     Creates a target some distance away from the artillery piece
     """
 
-    def __init__(self):
+    def __init__(self, algo, phase):
         self.targetDistance = None  # meters
         self.minDistance = 10  # meters
         self.maxDistance = 10000  # meters
-
-    def newTarget(self, **kwargs):
-        if kwargs["algo"] == "ANN":
-            if kwargs["phase"] == 'train':
-                randomi = np.random.choice(len(self.training), kwargs["batch"], replace=False)
-                return self.training[randomi]
-            elif kwargs["phase"] == 'validation':
-                randomi = np.random.choice(len(self.validation), kwargs["batch"], replace=False)
-                return self.validation[randomi]
-            elif kwargs["phase"] == 'test':
-                return self.test
+        if algo == "ANN":  # if the network is an ANN, generate train/test sets and properly set up target creation
+            self.generateANNSets()
+            if phase == 'train':
+                self.setup = 'annTrain'
+            elif phase == 'validation':
+                self.setup = 'annValid'
+            elif phase == 'test':
+                self.setup = 'annTest'
             else:
                 raise ValueError('Invalid ANN phase type, e.g. train/test/etc. (kwargs "phase" variable)')
+
+    def newTarget(self, batch):
+        if self.setup == 'annTrain':
+            randomi = np.random.choice(len(self.training), batch, replace=False)
+            return self.training[randomi]
+        elif self.setup == 'annValid':
+            randomi = np.random.choice(len(self.validation), batch, replace=False)
+            return self.validation[randomi]
+        elif self.setup == 'annTest':
+            return self.test
 
     def generateANNSets(self):
         setSizes = 1000
@@ -62,7 +63,7 @@ class Target:
         cycler = 0
         self.training, self.validation, self.test = np.zeros(setSizes), np.zeros(setSizes), np.zeros(setSizes)
         for i in range(setSizes * 3):
-            j = i % 3
+            j = i % 3  # counts by 3
             k = i - j
             k = int(k / 3)
             if cycler == 0:
@@ -102,31 +103,30 @@ class Physics:
     def fGrav(self, mass):
         return mass * self.gravity
 
-    def ballistic(self, vS, hS, h):
-        t_peak = (vS - 0) / self.gravity
-        dist_maxY = (vS * t_peak) - (.5 * self.gravity * t_peak)
-        dist_maxX = hS * (t_peak * 2)
-        return dist_maxX, dist_maxY, t_peak  # delete y and time distance later, just for debugging
+    def ballistic(self, v, a):
+        dist_maxX = (v ** 2 * np.sin(
+            np.deg2rad(2 * a)) / self.gravity)  # equation for horizontal distance covered based on angle and v
+        return dist_maxX
 
 
-def learningMethod(algo):
+def learningMethodTarget(algo):
     if algo == 'ANN':
         import tensorflow as tf
-        target = Target()
-        target.generateANNSets()
+        target = Target(algo, 'train')
         return target
 
 
 algorithm = 'ANN'
-target = learningMethod(algorithm)
-target.generateANNSets()
-trainingSample = target.newTarget(algo=algorithm, phase="train", batch=10)
+target = learningMethodTarget(algorithm)
+trainingSample = target.newTarget(10)
+
+print(trainingSample)
 
 arty = Artillery()
-v, h, height = arty.shoot()
+v, a = arty.shoot()
 env = Physics()
-distance, yyy, ttt = env.ballistic(v, h, height)
+distance = env.ballistic(v, a)
 
-print(distance, yyy, ttt)
-# http://hyperphysics.phy-astr.gsu.edu/hbase/traj.html
+print(distance)
+
 # rewardScaled = 100*((target-abs(target-landed))/target) #get's percentage close to target as a score
