@@ -1,5 +1,5 @@
 """
-A game of Handman.  Loads in a list of words from a text file and randomly chooses them for a game.
+A game of Hangman.  Loads in a list of words from a text file and randomly chooses them for a game.
 Pretty dirty code...a lot of work arounds.  But it works! :D
 """
 
@@ -55,7 +55,7 @@ def play(count, guessWord, strikes, word, guesses): #plays the game
     if count == 0:
         wordList = readWords()
         word = pickWord(wordList)
-        print('DEBUGGING:: WORD IS:', word)
+        # print('DEBUGGING:: WORD IS:', word)
         guessWord = generateUnder(guessWord, word, 0, count, strikes, guesses)
         print('Welcome to Hangman!  Guess a letter that fills in the blank.  Six strikes and you lose!')
         print('Here is the current word:')
@@ -77,8 +77,10 @@ while True: #using while True because for some reason strikes <=5 or stringedWor
     stringedWord = ''.join(guessWord)
     if strikes > 5:
         print('You lose! Sorry...')
+        print('The word was {}.'.format(word[:-1]))
         break
     if stringedWord == word[:-1]:
         print('You win! Congratulations!! :D')
+        print('The word was {}.'.format(word[:-1]))
         break
 
