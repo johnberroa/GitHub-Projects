@@ -1,0 +1,1 @@
+This is an area for me to throw tiny codes that do useful things, possible for future reference or just because I thought they were neat solutions.
