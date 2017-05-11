@@ -17,8 +17,8 @@ def forCycle(x, loopSize):
 def cycler(k, cycles):
     '''
     Where the code that gets done in the for loop gets placed.  Need a 'if cycles' for each loop if you want something
-    done differently each time.  Currently it is set up for 3.  It won't work properly for higher numbers, and will be
-    inefficient for smaller numbers.
+    done differently each time.  Currently it is set up for 3.  If this isn't changed to fit the number you input,
+    it won't work properly for higher desired numbers, and will be inefficient for smaller desired numbers.
     '''
     if cycles == 0:
         print(k, 'One')
@@ -30,4 +30,4 @@ def cycler(k, cycles):
         print('There is no code to perform during this iteration.')
 
 
-forCycle(3, 100) #count by 3 for 100 iterations
+forCycle(3, 100) #count for 100 iterations repeating the index 3 times
