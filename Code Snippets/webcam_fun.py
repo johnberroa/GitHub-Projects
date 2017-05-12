@@ -1,3 +1,6 @@
+# Just a little fun adding effects to the OpenCV webcam stream tutorial script
+# http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_gui/py_video_display/py_video_display.html
+
 import numpy as np
 import cv2
 
