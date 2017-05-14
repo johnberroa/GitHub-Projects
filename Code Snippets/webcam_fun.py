@@ -36,6 +36,8 @@ def openCam(count, k, type, color):
         level += 1
         cv2.putText(frame, "'a': Alien", (20, x + (15 * level)), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
         level += 1
+        cv2.putText(frame, "Type 's' to save image", (10, x + (15 * level + (16//2))), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+        level += 1
         cv2.putText(frame, "Type 'q' to quit", (10, x + (15 * level + (16//2))), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Play around with the stream
@@ -89,6 +91,8 @@ def openCam(count, k, type, color):
             type = 'c'
         if cv2.waitKey(1) & 0xFF == ord('p'):
             type = 'p'
+        if cv2.waitKey(1) & 0xFF == ord('s'):
+            cv2.imwrite('WebcamFun.jpg', frame)
 
 
     # When everything done, release the capture
