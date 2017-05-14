@@ -34,6 +34,8 @@ def openCam(count, k, type, color):
         level += 1
         cv2.putText(frame, "'p': Phantom", (20, x + (15 * level)), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
         level += 1
+        cv2.putText(frame, "'a': Alien", (20, x + (15 * level)), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+        level += 1
         cv2.putText(frame, "Type 'q' to quit", (10, x + (15 * level + (16//2))), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Play around with the stream
@@ -49,7 +51,18 @@ def openCam(count, k, type, color):
                 frame = simpleDifference(frame, g_bg)
             cv2.imshow('Stream', frame)
         elif type == 'b':
-            frame = cv2.erode(frame, k, iterations=5)
+            if color == 0:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                frame = cv2.erode(frame, k, iterations=5)
+            else:
+                frame = cv2.erode(frame, k, iterations=5)
+            cv2.imshow('Stream', frame)
+        elif type == 'a':
+            if color == 0:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                frame = cv2.dilate(frame, k, iterations=5)
+            else:
+                frame = cv2.dilate(frame, k, iterations=5)
             cv2.imshow('Stream', frame)
         elif type == 'c':
             color = 1
@@ -70,6 +83,8 @@ def openCam(count, k, type, color):
             type = 'd'
         if cv2.waitKey(1) & 0xFF == ord('b'):
             type = 'b'
+        if cv2.waitKey(1) & 0xFF == ord('a'):
+            type = 'a'
         if cv2.waitKey(1) & 0xFF == ord('c'):
             type = 'c'
         if cv2.waitKey(1) & 0xFF == ord('p'):
