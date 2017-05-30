@@ -23,6 +23,32 @@ vPerformance = np.zeros(trainingSteps)
 tCross = np.zeros(trainingSteps)
 vCross = np.zeros(trainingSteps)
 
+def plotResults():
+    #Plots the performance of the training and validation data, as well as the cross entropy at the end of the training phase
+    vpFinal = vPerformance
+    vcFinal = vCross
+    xaxis = np.arange(trainingSteps)
+    indicies = []
+    for i in range(trainingSteps):
+        if vPerformance[i] == 0:
+            indicies.append(i)
+    vpFinal = np.delete(vpFinal, indicies)
+    vcFinal = np.delete(vcFinal, indicies)
+    xaxis = np.delete(xaxis, indicies)
+    plt.plot(tPerformance, 'b-', label='Training')
+    plt.plot(xaxis, vpFinal, 'r-', label='Validation')
+    plt.title('Performance on Training and Validation Data During Training')
+    plt.xlabel('Training step')
+    plt.ylabel('Percent Correct')
+    plt.legend(loc=4)
+    plt.show()
+    plt.plot(tCross, 'b-', label='Training')
+    plt.plot(xaxis, vcFinal, 'r-', label='Validation')
+    plt.title('Cross Entropy of Training and Validation Data During Training')
+    plt.xlabel('Training step')
+    plt.ylabel('Cross Entropy')
+    plt.legend(loc=1)
+    plt.show()
 
 def convLayer(x, features, initial):
     #Creates a convolutional layer.  Takes in the 'initial' variable which tells the function if the layer is the first
@@ -64,33 +90,6 @@ def ffLayer(x, layers, type):
         fLogits = tf.matmul(x, fWeights) + fBias
         return fLogits, fWeights
 
-
-def plotResults():
-    #Plots the performance of the training and validation data, as well as the cross entropy at the end of the training phase
-    vpFinal = vPerformance
-    vcFinal = vCross
-    xaxis = np.arange(trainingSteps)
-    indicies = []
-    for i in range(trainingSteps):
-        if vPerformance[i] == 0:
-            indicies.append(i)
-    vpFinal = np.delete(vpFinal, indicies)
-    vcFinal = np.delete(vcFinal, indicies)
-    xaxis = np.delete(xaxis, indicies)
-    plt.plot(tPerformance, 'b-', label='Training')
-    plt.plot(xaxis, vpFinal, 'r-', label='Validation')
-    plt.title('Performance on Training and Validation Data During Training')
-    plt.xlabel('Training step')
-    plt.ylabel('Percent Correct')
-    plt.legend(loc=4)
-    plt.show()
-    plt.plot(tCross, 'b-', label='Training')
-    plt.plot(xaxis, vcFinal, 'r-', label='Validation')
-    plt.title('Cross Entropy of Training and Validation Data During Training')
-    plt.xlabel('Training step')
-    plt.ylabel('Cross Entropy')
-    plt.legend(loc=1)
-    plt.show()
 
 conv1, ck1L2 = convLayer(tfImages, features, True)
 conv2, ck2L2 = convLayer(conv1, features, False)
