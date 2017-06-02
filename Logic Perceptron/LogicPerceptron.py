@@ -1,4 +1,12 @@
+###################
+# A logical operator learning perceptron
+# Good to use for understanding how a perceptron works.
+# Displays decision boundary
+# Author: John Berroa
+###################
+
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class LogicPerceptron:
@@ -7,11 +15,16 @@ class LogicPerceptron:
     """
 
     def __init__(self):
-        self.epsilon = .1
+        self.epsilon = .0075 # initialized with very low learning rate in order to visualize learning process
         self.dimensions = 2
         self.training_size = 100
         self.test_size = 100
         self.weights = np.random.random(self.dimensions + 1)  # +1 because of adding a bias
+        self.plot_points = [[0,0],[0,1],[1,0],[1,1]]
+        self.plot_colors = []
+
+        print("Perceptron initialized with weights:\nW0 = {}     W1 = {}     W2 = {}"
+              .format(round(self.weights[0],2), round(self.weights[1],2), round(self.weights[2],2)))
 
 
     def generate_datasets(self):
@@ -42,7 +55,7 @@ class LogicPerceptron:
         """
         labels = []
         for datapoint in dataset:
-            labels.append(function(datapoint[0], datapoint[1]))
+            labels.append(function(datapoint[1], datapoint[2]))
         return labels
 
 
@@ -61,72 +74,96 @@ class LogicPerceptron:
     def functions_to_learn(self, selector):
         """
         Functional definitions for the perceptron to learn
-        :param selector (selects which function):
+        Instantiates plots for visualization of the decision boundary
+        :param selector: selects which function to activate
         :return function:
         """
         if selector == 'and':
             function = lambda x1, x2: x1 and x2
+            for point in self.plot_points:
+                self.plot_colors.append(function(point[0], point[1]))
+            for color, point in enumerate(self.plot_points):
+                plt.scatter(*point, s=50, c='b' if self.plot_colors[color] == 1 else 'r')
+            print("Perceptron will now learn '{}'...\n\n".format(selector))
             return function
         elif selector == 'or':
             function = lambda x1, x2: x1 or x2
+            for point in self.plot_points:
+                self.plot_colors.append(function(point[0], point[1]))
+            for color, point in enumerate(self.plot_points):
+                plt.scatter(*point, s=50, c='b' if self.plot_colors[color] == 1 else 'r')
+            print("Perceptron will now learn '{}'...\n\n".format(selector))
             return function
         elif selector == 'nand':
             function = lambda x1, x2: not (x1 and x2)
+            for point in self.plot_points:
+                self.plot_colors.append(function(point[0], point[1]))
+            for color, point in enumerate(self.plot_points):
+                plt.scatter(*point, s=50, c='b' if self.plot_colors[color] == 1 else 'r')
+            print("Perceptron will now learn '{}'...\n\n".format(selector))
             return function
         elif selector == 'nor':
             function = lambda x1, x2: not (x1 or x2)
+            for point in self.plot_points:
+                self.plot_colors.append(function(point[0], point[1]))
+            for color, point in enumerate(self.plot_points):
+                plt.scatter(*point, s=50, c='b' if self.plot_colors[color] == 1 else 'r')
+            print("Perceptron will now learn '{}'...\n\n".format(selector))
             return function
         else:
-            raise ValueError("Incorrect function to learn type.  Pick and/or/nand/nor.  Input was:", selector)
+            raise ValueError("Incorrect function to learn.  Pick and/or/nand/nor.  Input was:", selector)
 
 
     def infer(self, datapoint):
         """
         Passes datapoint through the network to get an answer
         :param datapoint:
-        :return output (the answer):
+        :return output:  the answer of the inference
         """
         activation = np.dot(self.weights, datapoint)
         output = self.threshold(activation)
         return output
 
 
-    def learn(self, outputs, labelset, datapoint):
+    def learn(self, output, label, datapoint):
         """
         Implements the perceptron learning rule
-        :param outputs:
-        :param labelset:
-        :param dataset:
+        :param output:
+        :param label:
+        :param datapoint:
         """
-        delta_w = self.epsilon * ((labelset - outputs) * datapoint)
+        delta_w = self.epsilon * ((label - output) * datapoint)
         self.weights += delta_w # perceptron learning rule
 
 
     def train(self, function_string, epochs):
         """
-        Trains the perceptron for a certain amount of epochs, then tests it and returns the result
+        Trains the perceptron for a certain amount of epochs, then tests it
         :param function_string:
         :param epochs:
-        :return performance (on test set):
         """
         training_set, test_set = self.generate_datasets()
         function = self.functions_to_learn(function_string)
         labels = self.generate_labels(function, training_set)
         for e in range(epochs):
+            self.test(function, test_set, e, epochs)
             for i, step in enumerate(training_set):
                 output = self.infer(step)
                 self.learn(output, labels[i], step)
-        performance_test = self.test(function, test_set)
-        return performance_test
+        self.test(function, test_set, epochs, epochs)
 
 
-    def test(self, function, test_set):
+    def test(self, function, test_set, e, e2):
         """
-        Tests the performance of the current weights against the training set
-        :param function_string:
+        Tests the performance of the current weights against the training set and then prints the result
+        :param function:
         :param test_set:
-        :return performance:
+        :param e: these just pass through into the plotting function; they are the current epoch and epoch length
+        :param e2: ^ see above
+        :return:
         """
+        print("Perceptron trained to weights:\nW0 = {}     W1 = {}     W2 = {}"
+              .format(round(self.weights[0], 2), round(self.weights[1], 2), round(self.weights[2], 2)))
         labels = self.generate_labels(function, test_set)
         results = []
         for i, step in enumerate(test_set):
@@ -137,11 +174,35 @@ class LogicPerceptron:
                 results.append(0)
         correct_results = np.count_nonzero(results)
         performance = correct_results / self.test_size
+        print("Test performance after training: {}%\n----".format(performance * 100))
+        self.plot_decision_boundary(e, e2)
         return performance
+
+
+    def plot_decision_boundary(self, epoch, epoch_length):
+        """
+        Plots the decision boundary and then shows the plot
+        :param epoch: the current epoch
+        :param epoch_length:  the total number of epochs
+        :return:
+        """
+        if epoch < epoch_length:
+            y_point = (0, (-self.weights[0] / self.weights[2]))
+            x_point = ((-self.weights[0] / self.weights[1]), 0)
+            slope = (y_point[1] - y_point[0]) / (x_point[1] - x_point[0])
+            y_out = lambda points: slope * points
+            x = np.linspace(-10, 10, 100)
+            plt.plot(x, y_out(x) + y_point[1], 'g--', linewidth=3, alpha=epoch/epoch_length + .2 if epoch < epoch_length else 1)
+        else:
+            plt.ylim([-.2, 1.2])
+            plt.xlim([-.2, 1.2])
+            plt.show()
+
+
+
 
 
 if __name__ == "__main__":
     perceptron = LogicPerceptron()
-    performancetst = perceptron.train('and', 5) # can do 'and', 'or', 'nand', and 'nor'
-    print("\n\nTest performance after training:", performancetst)
+    performancetst = perceptron.train('nand', 10) # can do 'and', 'or', 'nand', and 'nor'
 
