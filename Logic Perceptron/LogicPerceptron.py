@@ -203,5 +203,5 @@ class LogicPerceptron:
 
 if __name__ == "__main__":
     perceptron = LogicPerceptron()
-    performancetst = perceptron.train('nand', 10) # can do 'and', 'or', 'nand', and 'nor'
+    perceptron.train('nand', 10) # can do 'and', 'or', 'nand', and 'nor'
 
