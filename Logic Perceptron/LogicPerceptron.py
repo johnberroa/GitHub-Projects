@@ -186,14 +186,13 @@ class LogicPerceptron:
         :param epoch_length:  the total number of epochs
         :return:
         """
-        if epoch < epoch_length:
-            y_point = (0, (-self.weights[0] / self.weights[2]))
-            x_point = ((-self.weights[0] / self.weights[1]), 0)
-            slope = (y_point[1] - y_point[0]) / (x_point[1] - x_point[0])
-            y_out = lambda points: slope * points
-            x = np.linspace(-10, 10, 100)
-            plt.plot(x, y_out(x) + y_point[1], 'g--', linewidth=3, alpha=epoch/epoch_length + .2 if epoch < epoch_length else 1)
-        else:
+        y_point = (0, (-self.weights[0] / self.weights[2]))
+        x_point = ((-self.weights[0] / self.weights[1]), 0)
+        slope = (y_point[1] - y_point[0]) / (x_point[1] - x_point[0])
+        y_out = lambda points: slope * points
+        x = np.linspace(-10, 10, 100)
+        plt.plot(x, y_out(x) + y_point[1], 'g--', linewidth=3, alpha=epoch/epoch_length + .2 if epoch < epoch_length else 1)
+        if epoch == epoch_length:
             plt.ylim([-.2, 1.2])
             plt.xlim([-.2, 1.2])
             plt.show()
