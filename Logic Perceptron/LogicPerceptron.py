@@ -14,11 +14,11 @@ class LogicPerceptron:
     Creates a perceptron that learns logical operators AND, OR, NAND, and NOR
     """
 
-    def __init__(self):
-        self.epsilon = .0075 # initialized with very low learning rate in order to visualize learning process
+    def __init__(self, epsilon=.0075, training_size=100, test_size=100):
+        self.epsilon = epsilon # initialized with very low learning rate in order to visualize learning process
         self.dimensions = 2
-        self.training_size = 100
-        self.test_size = 100
+        self.training_size = training_size
+        self.test_size = test_size
         self.weights = np.random.random(self.dimensions + 1)  # +1 because of adding a bias
         self.plot_points = [[0,0],[0,1],[1,0],[1,1]]
         self.plot_colors = []
@@ -188,7 +188,10 @@ class LogicPerceptron:
         """
         y_point = (0, (-self.weights[0] / self.weights[2]))
         x_point = ((-self.weights[0] / self.weights[1]), 0)
-        slope = (y_point[1] - y_point[0]) / (x_point[1] - x_point[0])
+        try:
+            slope = (y_point[1] - x_point[1]) / (y_point[0] - x_point[0]) # will not work if x and y intercepts are 0
+        except ZeroDivisionError:
+            print("X and Y intercepts are both zero.  Due to the way slope is calculated, this causes a division by zero.  Sorry.")
         y_out = lambda points: slope * points
         x = np.linspace(-10, 10, 100)
         plt.plot(x, y_out(x) + y_point[1], 'g--', linewidth=3, alpha=epoch/epoch_length + .2 if epoch < epoch_length else 1)
@@ -203,5 +206,5 @@ class LogicPerceptron:
 
 if __name__ == "__main__":
     perceptron = LogicPerceptron()
-    perceptron.train('nand', 10) # can do 'and', 'or', 'nand', and 'nor'
+    perceptron.train('and', 10) # can do 'and', 'or', 'nand', and 'nor'
 
