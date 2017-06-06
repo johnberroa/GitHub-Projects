@@ -8,7 +8,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import multivariate_normal as multNorm
-from scipy.cluster.vq import kmeans, vq
 
 
 class ClusterPerceptron:
@@ -26,7 +25,6 @@ class ClusterPerceptron:
         self.training_labels = data[2]
         self.test_labels = data[3]
         self.weights = np.random.random(self.dimensions + 1)  # +1 because of adding a bias
-
 
 
         print("Perceptron initialized with weights:\nW0 = {}     W1 = {}     W2 = {}"
