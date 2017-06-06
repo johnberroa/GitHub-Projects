@@ -32,16 +32,16 @@ class LogicPerceptron:
         Generates training and test data sets as 1s and 0s with 1s as the final column for bias
         :return training_set, test_set:
         """
-        # generate training set
-        training_set = np.random.randint(2, size=(self.training_size, self.dimensions))  # pairs of 1s and 0s
+        # generate bias
         bias = np.ones(self.training_size)  # shape (100,)
         bias = np.expand_dims(bias, axis=1)  # shape (100,1)
+
+        # generate training set
+        training_set = np.random.randint(2, size=(self.training_size, self.dimensions))  # pairs of 1s and 0s
         training_set = np.concatenate((bias, training_set), axis=1)
 
         # generate test set
         test_set = np.random.randint(2, size=(self.test_size, self.dimensions))  # pairs of 1s and 0s
-        bias = np.ones(self.test_size)  # shape (100,)
-        bias = np.expand_dims(bias, axis=1)  # shape (100,1)
         test_set = np.concatenate((bias, test_set), axis=1)
         return training_set, test_set
 
@@ -155,7 +155,7 @@ class LogicPerceptron:
 
     def test(self, function, test_set, e, e2):
         """
-        Tests the performance of the current weights against the training set and then prints the result
+        Tests the performance of the current weights against the test set and then prints the result
         :param function:
         :param test_set:
         :param e: these just pass through into the plotting function; they are the current epoch and epoch length
@@ -198,6 +198,9 @@ class LogicPerceptron:
         if epoch == epoch_length:
             plt.ylim([-.2, 1.2])
             plt.xlim([-.2, 1.2])
+            plt.title("Logic Perceptron")
+            plt.xlabel("True(1) or False(0)")
+            plt.ylabel("True(1) or False(0)")
             plt.show()
 
 

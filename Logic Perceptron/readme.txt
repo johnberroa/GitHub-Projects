@@ -1,1 +1,0 @@
-This program creates a logical operator learning perceptron, i.e. it learns how to compute "and", "or", "nand", and "nor".  It returns its weights and test sample performance so that training can be seen in the numbers.  For more understanding, it also plots the movement of the decision boundary that linearly separates the data.
