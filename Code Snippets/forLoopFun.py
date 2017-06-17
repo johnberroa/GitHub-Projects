@@ -9,7 +9,6 @@ def forCycle(x, loopSize):
         j = i % x  # counts by x; in the default case, 3
         k = i - j
         k = int(k / x)
-        print("THIS IS K:",k)
         if cycles == x:
             cycles = 0
         cycler(k, cycles)
