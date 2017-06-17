@@ -7,5 +7,5 @@ the data.  The Cluster Perceptron seperates two clusters of data.  It also print
 both the training and test sets.  In theory, one can input their own cluster data and it will work out of the box.  Below are two 
 pictures showing prototypical output from the algorithms:
 
-![Logic](/Perceptrons/docs/logicperceptron.png?raw=true "Logic Perceptron")
-![Cluster](/Perceptrons/docs/clusterperceptron.png?raw=true "Cluster Perceptron")
+![Logic](/Perceptrons/gfx/logicperceptron.png?raw=true "Logic Perceptron")
+![Cluster](/Perceptrons/gfx/clusterperceptron.png?raw=true "Cluster Perceptron")
