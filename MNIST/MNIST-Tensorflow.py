@@ -129,7 +129,7 @@ with tf.Session() as session:
         tPerformance[step], tCross[step], weights = session.run(
             [accuracy, crossEntropy, trainStep], feed_dict={tfImages: images, tfLabels: labels, dropoutKeep: .7})
         print('Training performance: {}.  Cross entropy: {}\nStep: {}/{}'.format(tPerformance[step], tCross[step], step+1, trainingSteps))
-        if step%100==0 or step==trainingSteps-1:
+        if step%50==0 or step==trainingSteps-1:
             images, labels = mnist.validation.images, mnist.validation.labels
             vPerformance[step], vCross[step] = session.run([accuracy, crossEntropy], feed_dict={tfImages: images, tfLabels: labels, dropoutKeep: 1})
             # took out the weights calc in the validation
