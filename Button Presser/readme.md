@@ -11,5 +11,5 @@ The timing mechanism isn't exactly on time, but it's close enough to get an idea
 
 ## Example Images
 
-![Overview](/Button Presser/gfx/button1.png?raw=true "Overview Image")
-![Zoomed](/Button Presser/gfx/button2.png?raw=true "Zoomed In")
+![Overview](/Button%20Presser/gfx/button1.png?raw=true "Overview Image")
+![Zoomed](/Button%20Presser/gfx/button2.png?raw=true "Zoomed In")
