@@ -30,7 +30,7 @@ class GradientRegressor():
         self.b = 0
         self.learning_rate = learning_rate
         self.learning_rate_list = []
-        self.simple_speedchange_rate = 5  # hypermeter turned through trial and error
+        self.simple_speedchange_rate = 5  # hyperparameter tured through trial and error
         self.m_avg_grad = []
         self.b_avg_grad = []
         self.training_step = 0
