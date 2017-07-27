@@ -8,7 +8,9 @@ Can create both a regular difference image (between 2 images), and a cumulative 
 ## Example Images
 
 Simple Difference:
+
 ![Difference Image](gfx/diff1.png)
 
 Cumulative Difference:
+
 ![Cumulative Difference Image](gfx/diff2.png)
