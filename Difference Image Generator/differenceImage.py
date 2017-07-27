@@ -5,6 +5,7 @@ cumulative difference image, in which the last image can be weighted to be brigh
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import cv2
 from scipy import misc
 
 def getFileInfo():
@@ -66,17 +67,16 @@ currentDir = currentDir + "\images\\"
 numImgs = sum(os.path.isfile(os.path.join(currentDir, f)) for f in os.listdir(currentDir))# - 1 #-1 to not include this coding file
 size = getFileInfo()
 images = np.zeros([numImgs, size[0], size[1]])
-index = 0
 
 
-for img in range(numImgs):
+for index, img in enumerate(range(numImgs)):
     loaded = plt.imread(currentDir+"\{} ({}).jpg".format(fileName, index))
     loaded = misc.imresize(loaded, .077)
     loaded = rgb2gray(loaded)
     loaded = np.flipud(loaded)
     loaded = np.fliplr(loaded)
+    loaded = cv2.GaussianBlur(loaded,(5,5),0)
     images[index] = loaded
-    index += 1
 
 plt.gray()
 simpleDolphin = simpleDifference(images[0],images[1])
