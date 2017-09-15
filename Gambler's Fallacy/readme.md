@@ -6,5 +6,4 @@ This is a coin tossing test of the gambler's fallacy.  More info in the notebook
 - Equal Probability: Will mostly choose the least frequent side
 - Recent Probability: Will mostly choose the least frequent side over some past number of trials
 
-
-![Results](Gambler's%20Fallacy/gfx/graph.png?raw=true "Results of gambling")
+![Results](/Gambler's%20Fallacy/gfx/graph.png?raw=true "Results of gambling")
