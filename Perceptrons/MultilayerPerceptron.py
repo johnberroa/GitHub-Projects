@@ -7,14 +7,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from testdata import Data
+import pickle
+from datetime import datetime as dt
+# from testdata import ToyData
 from scipy.special import expit as sigmoid
-from numpy.random import multivariate_normal as multNorm
 
+# what I learned: build it simple first then add feautures; don't try to debug on a complex system to get the simplest model to work
 #TODO: Allow for custom activation function
 #TODO: Error functions?
 #TODO: Momentum?
-#TODO: "Take the result with the best training or validation performance" so have an optioj to train it multiple times
+#TODO: "Take the result with the best training or validation performance" so have an option to train it multiple times
 
 class MultiLayerPerceptron:
     """
@@ -22,6 +24,8 @@ class MultiLayerPerceptron:
     Stores weight types, epsilons (learning rates), and activation functions for each layer so that they can be
     different for experimentation
     """
+
+    ################ Magic Functions ################
 
     def __init__(self, global_activation, global_epsilon, global_weight_type, debug=False):
         if debug:
@@ -38,7 +42,7 @@ class MultiLayerPerceptron:
         self.layer_sizes = []
 
         # Variables needed for training
-        self.layer_sums = []
+        self.layer_logits = []
         self.layer_outputs = []
 
         # Recorded variables for analysis
@@ -78,10 +82,12 @@ class MultiLayerPerceptron:
             string = string + laststring
         return string
 
+    ##############---Magic Functions---##############
+    ################ Network Creation Functions ################
 
     def _init_weights(self, w):
         """
-        Checks if initialized global weight type is valid; creating weights is the _create_weights function
+        Checks if input global weight type is valid; creating weights is the _create_weights function
         :param w:
         :return desired weight initialization:
         """
@@ -115,13 +121,13 @@ class MultiLayerPerceptron:
         elif w == 'uniform':
             return np.random.uniform(-1,1,(dim_in + 1, size))
         else:
-            raise ValueError("Invalid weight initilization type.  "
+            raise ValueError("Invalid weight initialization type.  "
                              "Input: '{}'; Required: 'normal','trunc','ones',zeros', or 'uniform'.".format(w))
 
 
     def _init_activation(self, a):
         """
-        Declares the activation function and the derivative of it
+        Checks if input activation type is valid
         :param a:
         :return desired function:
         """
@@ -148,7 +154,7 @@ class MultiLayerPerceptron:
         elif request == 'linear':
             return lambda x: x
         elif request == 'relu':
-            return lambda x: x if x > 0 else 0
+            return np.vectorize(lambda x: x if x > 0 else 0)
         else:
             raise ValueError("Invalid activation function.  "
                              "Input: '{}'; Required: 'sigmoid','tanh','linear', or 'relu'.".format(request))
@@ -167,12 +173,12 @@ class MultiLayerPerceptron:
         elif func == 'linear':
             return 1
         elif func == 'relu':
-            return lambda out: 1 if out > 0 else 0
+            return np.vectorize(lambda out: 1 if out > 0 else 0)
         elif func == 'error':
-            return lambda target, output: target - output
+            return lambda output, target: -(output - target) #is the negtive necessary
         else:
             raise ValueError("Invalid activation function to generate derivative.  "
-                             "Input: '{}'; Required: 'sigmoid','tanh','linear', or 'relu'.".format(func))
+                             "Input: '{}'; Required: 'sigmoid','tanh','linear', 'relu', or 'error'.".format(func))
 
 
     def _get_epsilon(self, request):
@@ -187,28 +193,21 @@ class MultiLayerPerceptron:
             return request  # because it will be a number in this case
 
 
-    def _add_bias(self, v):
-        """
-        Takes in an input vector, adds a bias of 1 to the front of it, and then expands dimensions to avoid:
-        (2,) vs. (2,1)
-        :param v:
-        :return vector with bias and proper dimensionality:
-        """
-        v = np.append(1, v)
-        try:
-            _ = v.shape[1]
-        except:
-            v = np.expand_dims(v, axis=1)
-        return v
-
-
-    def _epsilon_decay(self):
-        raise NotImplementedError
-
-
     def create_layer(self, size, dim_in=None, activation='default', weight_type='default', epsilon='default'):
+        """
+        Create a layer in the network.  Each layer has a size, dimensionality, activation, weights, weight_types, and
+        epsilon.  dim_in is used for the first layer only; after that it is implied from previous layers.  Layers are
+        purely defined by these parameters in the same position in their own lists i.e. layer 2 = size[2],activation[2],
+        weights[2],epsilon[2],...etc.
+        :param size:
+        :param dim_in:
+        :param activation:
+        :param weight_type:
+        :param epsilon:
+        :return:
+        """
         epsilon = self._get_epsilon(epsilon)
-        if len(self.layer_weights) == 0:  # generate the weight matrix; if first layer, make sure there is input dimensionality provided
+        if len(self.layer_weights) == 0:  # if first layer, make sure there is input dimensionality provided
             if dim_in == None:
                 raise ValueError("You are creating the first layer of the network.  "
                                  "Please provide the input dimensionality with 'dim_in'")
@@ -231,6 +230,27 @@ class MultiLayerPerceptron:
         else:
             self.layer_weight_types.append(weight_type)
 
+    ##############---Network Creation Functions---##############
+    ################ Training Functions ################
+
+    def _add_bias(self, v):
+        """
+        Takes in an input vector, adds a bias of 1 to the front of it, and then expands dimensions to avoid:
+        (3,) vs. (1,3)
+        :param v:
+        :return vector with bias and proper dimensionality:
+        """
+        v = np.append(1, v)
+        try:  # add dimension if it doesn't exist
+            _ = v.shape[1]
+        except:
+            v = np.expand_dims(v, axis=0)
+        return v
+
+
+    def _epsilon_decay(self):
+        raise NotImplementedError
+
 
     def _forward_step(self, layer, input):
         """
@@ -239,27 +259,170 @@ class MultiLayerPerceptron:
         :param input:
         :return layer output:
         """
+        if layer == 0:
+            print("SAVING ORIGINAL INPUT+BIAS")
+            self.input = self._add_bias(input)
         print("THE INPUT:\n", self._add_bias(input))
         print("THE WEIGHTS:\n", self.layer_weights[layer])
-        sums = np.dot(self._add_bias(input).T, self.layer_weights[layer])
+        sums = np.dot(self._add_bias(input), self.layer_weights[layer])
         print("THE SUMS:\n", sums)
         print("THE SUMS DIMS:\n",sums.shape)
-        self.layer_sums.append(sums)  # used for the backprop step   MAY NOT BE USED????
         activation_function = self._get_activation_func(self.layer_activation_funcs[layer])
-        output = []
-        for s in sums.T:
-            print("S:\n",s)
-            print("Sflt:\n", float(s))
-            output.append(activation_function(float(s)))
-            print("OUTPUT TO GO IN:\n", output[-1])
-        # output = np.array([activation_function(s) for s in sums.T])
-        output = np.array(output)
-        output = np.expand_dims(output, axis=1)
-        print("OUTPUT SHAPE:\n", output.shape)
-        print("OUTPUT:\n", output, "\n\n\n")
-        self.layer_outputs.append(output)
+        # output = []
+        output = activation_function(sums)
+        if layer == len(self.layer_sizes)-1:
+            print("ADDING BIAS TO FINAL LAYER")
+            output = self._add_bias(output)
+            sums = self._add_bias(sums)
+            self.layer_logits.append(sums)
+            self.layer_outputs.append(output)
+            print(len(self.layer_outputs))
+        else:
+            self.layer_logits.append(sums)  # used for the backprop step   MAY NOT BE USED????
+            self.layer_outputs.append(output)
         return output
 
+
+    def _feedforward(self, input):
+        """
+        Propagates an input through the network to get the network's result, to be fed into backprop.
+        Exact copy of _predict, but in the proper function section and with an easier to understand name in its
+        context, as well as no return.
+        :param input:
+        """
+        for layer in range(len(self.layer_sizes)):
+            input = self._forward_step(layer, input)
+
+
+    def _calculate_error(self, output, target):
+        """
+        Calculates the squared error between the network output and the target, and returns it
+        :param output:
+        :param target:
+        :return error:
+        """
+        # so this should be a sum, where it sums over one item in the stochastic case, because it'll be a [1], but in the batch case
+        # it should be a list of numbers (inputs that were sent through) that it iterates through
+        # error = np.mean([.5 * (target - sample) ** 2 for sample in output])
+        # shouldn't need to be! the whole batch should be input at once
+        error = .5 * (output - target)**2
+        self.errors.append(error)
+        return error
+
+
+    def _backpropagate(self, target):
+        """
+        Backpropagates the error through all the layers in one function call (as opposed to _feedforward which
+        must be repeated)
+        :param target:
+        :return ??????????????????????????:
+        """
+        print("BACKPRAAAAAPPPPPPPPPPPPPPP")
+        exclude_bias = self.layer_outputs[-1].T[1:]
+        error = self._calculate_error(exclude_bias, target)
+        print("ERROR", error)
+
+
+        print('\n\n\n\n')
+        for i in range(len(self.layer_outputs)):
+            print("LAYEROUTPUT",i,':\n',self.layer_outputs[i].shape)
+        print('\n')
+        for i in range(len(self.layer_weights)):
+            print("LAYERWEIGHT",i,':\n',self.layer_weights[i].shape)
+        print('\n')
+        for i in range(len(self.layer_logits)):
+            print("LAYERLOGIT",i,':\n',self.layer_logits[i].shape)
+        print('\nERRORshape', error.shape)
+        print('\n\n\n\n')
+
+
+
+
+        deltas_backwards = []
+        last_activation = self.layer_activation_funcs[-1]
+        print("LAST ACTIVATION", last_activation)
+        print("DERIVATIVE", self._get_derivative(last_activation)(self.layer_outputs[-1]), "these should be the same up and down")
+        derivative_function = self._get_derivative(last_activation)
+        derivative_error = self._get_derivative('error')
+        ###lukasapproach
+        GRADIENT = derivative_error(self.layer_outputs[-1], target) * derivative_function(self.layer_outputs[-2] * self.layer_weights[-1]) * self.layer_logits[-2]
+        print(GRADIENT)
+        GRADIENTS = [GRADIENT]
+        #####welch approach
+        # deltas = []
+        # derivs = []
+        # delta = np.multiply(derivative_error(self.layer_outputs[-1], target), derivative_function(self.layer_logits[-1]))
+        # deriv = np.dot(self.layer_outputs[-2].T, delta)
+        # deltas.append(delta)
+        # derivs.append(deriv)
+        if len(self.layer_sizes) > 1:  # if there are no hidden layers, skip this part
+            for layer in reversed(range(len(self.layer_sizes)-1)):  # -1 to not include last layer that was already calced
+                print("LAYER", layer+1,'/', len(self.layer_sizes), "technically layer", layer)
+                derivative_logit = self._get_derivative(self.layer_activation_funcs[layer])
+                ###lukasappraoch
+                print(self.layer_logits[layer].T)
+                print(GRADIENTS[-1])
+                print(self.layer_weights[layer + 1].T)
+                print(derivative_logit(self.layer_logits[layer] * self.layer_weights[layer]))
+                print(self.layer_logits[layer].T.shape)
+                print(GRADIENTS[-1].shape)
+                print(self.layer_weights[layer + 1].T.shape)
+                print(derivative_logit(self.layer_logits[layer] * self.layer_weights[layer]).shape)
+                print(np.dot(self.layer_weights[layer + 1].T, derivative_logit(self.layer_logits[layer] * self.layer_weights[layer])).shape)
+                GRADIENT = self.layer_logits[layer].T * GRADIENTS[-1] * self.layer_weights[
+                    layer + 1].T * derivative_logit(self.layer_logits[layer] * self.layer_weights[layer])
+
+                GRADIENTS.append(GRADIENT)
+                # ###welchapproach
+                # print(deltas[-1].shape)
+                # print(self.layer_weights[layer].T.shape)
+                # print(np.dot(deltas[-1], self.layer_weights[layer].T))
+                # print(derivative_logit(self.layer_logits[layer]))
+                # delta = np.multiply(np.dot(deltas[-1], self.layer_weights[layer].T)*derivative_logit(self.layer_logits[layer]))
+                # deriv = np.dot(self.layer_outputs[layer-1].T, delta)
+                # deltas.append(delta)
+                # derivs.append(deriv)
+        print("FERTIG")
+        # self._descend_gradient(input, deltas_backwards, changes_backwards)
+
+
+    def _descend_gradient(self, deltas, changes, GRAD):
+        """
+        Updates the weights of all layers with the DELTAS???? computed in the backprop step.
+        :param deltas:
+        :param changes:
+        :param GRAD:
+        """
+        for layer in range(2, len(self.layer_sizes)):
+            print("DESCENDING")
+            epsilon = self.layer_epsilons[-layer]
+            gradient = epsilon * GRAD[-layer]
+            print(gradient)
+            print(self.layer_weights[-layer])
+            self.layer_weights[-layer] = self.layer_weights[-layer] - gradient
+            print(self.layer_weights[-layer])
+            # self.
+        # deltas = list(reversed(deltas))
+        # for l in range(len(self.layer_sizes)):
+        #     print("LAYER", l)
+        #     gradient = self.layer_epsilons[l] * deltas[l] * [self.layer_outputs[l-1] if l > 0 else input]
+        #     print("GRADIENT:\n",gradient)
+        #     print("GRADIENTshape:\n",gradient.shape)
+        #     print(self.layer_weights[l])
+        #     self.layer_weights[l] = self.layer_weights[l] - gradient
+        #     print(self.layer_weights[l])
+        # # self.layer_weights[layer]
+
+
+    def learn(self, input, target, repitions):
+        #PSEUDOCODE
+        for r in repitions:
+            self._feedforward(input)
+            self._backpropagate(target)
+            # self._descend_gradient(x,y,z)
+
+    ##############---Training Functions---##############
+    ################ Data Processing Functions ################
 
     def predict(self, input):
         """
@@ -272,80 +435,112 @@ class MultiLayerPerceptron:
         prediction = input  # just for clarification sake
         return prediction
 
+    ##############---Data Processing Functions---##############
+    ############## Save/Load Functions ##############
+    def save(self, name=None, date=True):
+        """
+        Saves the current network structure and weights.  Can take in a specified name to save the file as, otherwise
+        it is called "savednetwork".
+        Can also append the date to the name.
+        :param name:
+        :param date:
+        """
+        gwt = self.global_weight_type
+        ge = self.global_epsilon
+        gaf = self.global_activation_func
+        lw = self.layer_weights
+        lwt = self.layer_weight_types
+        laf = self.layer_activation_funcs
+        le = self.layer_epsilons
+        ls = self.layer_sizes
+        network_packed = [gwt, ge, gaf, lw, lwt, laf, le, ls]
 
-    def _calculate_error(self, output, target):
-        # so this should be a sum, where it sums over one item in the stochastic case, because it'll be a [1], but in the batch case
-        # it should be a list of numbers (inputs that were sent through) that it iterates through
-        # error = np.mean([.5 * (target - sample) ** 2 for sample in output])
-        # shouldn't need to be! the whole batch should be input at once
-        error = .5 * (target - output)**2
-        self.errors.append(error)
-        return error
-
-
-    def _backpropagate(self, input, output, target):
-        # if layer == len(self.layer_sums) - 1:  # because of 0 indexing
-        #     delta = np.multiply(-(YYYY - TARGET), DERIVATIVE LAST LAYER(unactivated output of current layer))
-        #     gradient = np.dot(activated output of previous layer.T, delta)
-        # else:
-        #     delta = np.dot(FIRST GRADIET, W2.T) * unacvitved output current layer layer )
-        #     gradient = input.t, delta
-        #
-        error = self._calculate_error(output, target)
-        temp_outputs = np.append(input, self.layer_outputs)
-        for layer in reversed(range(len(self.layer_sizes))):
-            print("BACKPROP LAYER:",layer)
-            input = temp_outputs[layer - 1]
-            output = temp_outputs[layer]
-            activation_function = self._get_activation_func(self.layer_activation_funcs[layer])
-            delta = np.array([activation_function(o) * error for o in output])
-            delta = np.expand_dims(delta, axis=1)
-            print("DELTA:\n",delta)
-            print("DELTAshape:\n",delta.shape)
-            error = np.dot(self.layer_weights[layer].T, delta)[1:]  # why this?[:1]
-            self.descend_gradient(layer, delta, input)
-
-
-    def descend_gradient(self, layer, delta, input):
-        gradient = self.layer_epsilons[layer] * delta * np.append(1, input)  # WHY IS THIS A PLUS?
-        print("GRADIENT:\n",gradient)
-        print("GRADIENTshape:\n",gradient.shape)
-        print(self.layer_weights[layer])
-        print(self.layer_weights[layer].shape)
-        self.layer_weights[layer] = self.layer_weights[layer] + gradient
-        # self.layer_weights[layer]
-
-
+        if isinstance(name, str):
+            if date:
+                date = dt.today().isoformat()[:19]
+                date = date.replace(':','-')
+                f = open(name+date+'.pkl', 'wb')
+                pickle.dump(network_packed, f, -1)
+                f.close()
+            else:
+                f = open(name+'.pkl', 'wb')
+                pickle.dump(network_packed, f, -1)
+                f.close()
+        else:
+            if date:
+                date = dt.today().isoformat()[:19]
+                date = date.replace(':', '-')
+                f = open('savednetwork'+date+'.pkl', 'wb')
+                pickle.dump(network_packed, f, -1)
+                f.close()
+            else:
+                f = open('savednetwork.pkl', 'wb')
+                pickle.dump(network_packed, f, -1)
+                f.close()
 
 
+    def load(self, file):
+        """
+        Loads network structure and weights from a filename that was saved earlier with the save function.
+        :param file:
+        """
+        f = open(file, 'rb')
+        network_packed = pickle.load(f)
+        f.close()
 
+        self.global_weight_type = network_packed[0]
+        self.global_epsilon = network_packed[1]
+        self.global_activation_func = network_packed[2]
+        self.layer_weights = network_packed[3]
+        self.layer_weight_types = network_packed[4]
+        self.layer_activation_funcs = network_packed[5]
+        self.layer_epsilons = network_packed[6]
+        self.layer_sizes = network_packed[7]
+
+        ################---Save/Load Functions---################
 
 
 
 if __name__ == "__main__":
-    inputs = np.array([[0,0,1],[1,1,1],[1,0,1],[0,1,1]])
+    # inputs = np.array([[0,0,1],[1,1,1],[1,0,1],[0,1,1]])
+    #start debugging
+    inputs = np.array([[0,0],[0,1],[1,0],[1,1]])
     outputs = np.array([[0],[1],[1],[0]])
-    NeuralNet = MultiLayerPerceptron('relu',.001,'normal')
-    NeuralNet.create_layer(3, 3)
+    NeuralNet = MultiLayerPerceptron('relu',.001,'ones')
+    NeuralNet.create_layer(2, 2)
     NeuralNet.create_layer(2)
     NeuralNet.create_layer(1)
     # print(NeuralNet)
     print("DEBUG")
-    print(NeuralNet.layer_weights[0])
-    input = inputs
+    # print(NeuralNet.layer_weights[0])
+    first = NeuralNet.layer_weights
+    input = inputs[0]
     for l in range(len(NeuralNet.layer_weights)):
         print("Stepping forward for layer:",l+1)
         input = NeuralNet._forward_step(l, input)
     # print(NeuralNet.layer_outputs)
 
-    # output = [1]
-    NeuralNet._backpropagate(inputs, input, outputs)
-    print(NeuralNet.layer_weights[0])
+    output = outputs[0]
+    NeuralNet._backpropagate(inputs[0], output)
+    last = NeuralNet.layer_weights
 
-    # print(NeuralNet.layer_weight_types)
-    # print(NeuralNet.global_activation_func)
-    # print(NeuralNet.layer_activation_funcs)
-
+    print("\n\n\nFIRST{}\n\n\n\nLAST{}".format(first, last))
+    #end debugging
+    # # print(NeuralNet.layer_weight_types)
+    # # print(NeuralNet.global_activation_func)
+    # # print(NeuralNet.layer_activation_funcs)
+    #
+    # NeuralNet = MultiLayerPerceptron('relu',.001,'ones')
+    # NeuralNet.create_layer(2, 2)
+    # NeuralNet.create_layer(2)
+    # NeuralNet.create_layer(1)
+    # print("1:\n",NeuralNet)
+    # NeuralNet.save('backup')
+    #
+    # NeuralNet2 = MultiLayerPerceptron('sigmoid',.0000001,'zeros')
+    # print("2:\n",NeuralNet2)
+    # NeuralNet2.load('savednetwork.pkl')
+    # print("2LOAD:\n", NeuralNet2)
 
 '''
 So I need to make it impervious to batch size.  It should always work out through the matrix math
