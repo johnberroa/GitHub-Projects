@@ -6,10 +6,11 @@
 
 ###Dependencies###
 import numpy as np
-import ArtyAlgorithms as algo
-# import tensorflow as tf
-from tensorflow.contrib import learn
-from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
+from sklearn import preprocessing
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+
 
 
 class Artillery:
@@ -20,110 +21,103 @@ class Artillery:
     def __init__(self):
         self.force = 1000000  # newtons
         self.angle = 60  # degrees
-        self.contactTime = .001  # seconds
-        self.shellMass = 10  # kilograms
+        self.contact_time = .001  # seconds
+        self.shell_mass = 10  # kilograms
 
-    def changeAngle(self, size):
-        '''
-        Changes the angle of the barrel
-        If training the ANN, returns an array the size of the dataset of angle values'''
+    def change_angle(self, size=None, change=60):
+        """
+        Changes the angle of the barrel.  Either returns a list of random angle changes, or sets it to the user's
+        desire.
+        :param size:
+        :param change:
+        :returns list of angles if desired:
+        """
         if size != None:
             angles = np.random.randint(1, 90, size) #not inclusive of 90
             return angles
         else:
-            self.angle = np.random.randint(1, 90)
+            self.angle = change
 
-    def shoot(self):
-        speed = (self.force * self.contactTime) / self.shellMass
-        return speed, self.angle
 
+    def change_force(self, size=None, change=60):
+        """
+        Changes the force of the shot.  Either returns a list of random force changes, or sets it to the user's
+        desire.
+        :param size:
+        :param change:
+        :returns list of forces if desired:
+        """
+        if size != None:
+            forces = np.random.randint(10000, 100000000, size)
+            return forces
+        else:
+            self.force = change
+
+
+    def change_mass(self, size=None, change=60):
+        """
+        Changes the shell mass of the shot.  Either returns a list of random mass changes, or sets it to the user's
+        desire.
+        :param size:
+        :param change:
+        :returns list of masses if desired:
+        """
+        if size != None:
+            masses = np.random.randint(1, 100, size)
+            return masses
+        else:
+            self.shell_mass = change
+
+
+    def shoot(self, force, mass):
+        """
+        Shoots the artillery with current specs or with given specs
+        :return speed and angle:
+        """
+        if type(force)==type(np.array((1))):  # quick hacky solution
+            shots = []
+            for shot in range(len(force)):
+                shots.append((force[shot] * self.contact_time) / mass[shot])
+            return shots
+        else:
+            speed = (self.force * self.contact_time) / self.shell_mass
+            return speed, self.angle
 
 
 class Target:
     """
     Creates a target some distance away from the artillery piece
     """
+    def __init__(self, set_size, phys, angle, shots):#, algo):#, phase):
+        self.set_sizes = set_size
+        self.phys = phys
+        self.angles = angle
+        self.shots = shots
+        if len(self.angles) != len(self.shots):
+            raise ValueError("Length of angles and shots not equal")
+        if self.set_sizes != len(self.angles):
+            raise ValueError("Length of setsizes and angle/shots not equal")
 
-    def __init__(self):#, algo):#, phase):
-        self.targetDistance = None  # meters
-        self.minDistance = 35.58  # meters, based on 1000000 N, .001 s, and 10 kg
-        self.maxDistance = 1019.37  # meters, based on 1000000 N, .001 s, and 10 kg
-        self.setSizes = 2000
 
-    # def newTarget(self, batch, phase):
-    #     if phase == 'annTrain':
-    #         randomi = np.random.choice(len(self.training), batch, replace=False)
-    #         return self.training[randomi]
-    #     elif phase == 'annValid':
-    #         randomi = np.random.choice(len(self.validation), batch, replace=False)
-    #         return self.validation[randomi]
-    #     elif phase == 'annTest':
-    #         return self.test
-
-    def generateANNSets(self):
-        '''
-        Generates training and test labels (target distances).  Distances are multiplied by 100 to get an int, then
-        divided by 100 again to get it within the range of the artillery.
-        '''
-        used = []
-        cycler = 0
-        self.training, self.test = np.zeros(self.setSizes), np.zeros(self.setSizes)
-        for i in range(self.setSizes * 2):
-            j = i % 2  # counts by 2
-            k = i - j
-            k = int(k / 2)
-            if cycler == 0:
-                r = np.random.randint(self.minDistance * 100, self.maxDistance * 100)
-                r /= 100
-                while r in used:
-                    r = np.random.randint(self.minDistance * 100, self.maxDistance * 100)
-                    r /= 100
-                used.append(r)
-                self.training[k] = r
-                cycler += 1
-            if cycler == 1:
-                r = np.random.randint(self.minDistance * 100, self.maxDistance * 100)
-                r /= 100
-                while r in used:
-                    r = np.random.randint(self.minDistance * 100, self.maxDistance * 100)
-                    r /= 100
-                used.append(r)
-                self.test[k] = r
-                cycler = 0
-        return self.training, self.test
+    def generate_targets(self):
+        target_distances = []  # meters
+        for shot in range(self.set_sizes):
+            target_distances.append(self.phys.ballistic(self.shots[shot], self.angles[shot]))
+        return target_distances
 
 
 class Physics:
     """
     Creates the world the artillery is in, including gravity and wind, as well as their interactions
     """
-
     def __init__(self):
         self.gravity = 9.81  # meters/sec
-        self.windSpeedAgainst = None  # meters/sec; windspeed against the flight path of the shell
-        self.windSpeedPush = None  # meters/sec; windspeed pushing the flight path of the shell
-        self.airResistance = None  # newtons?????; force pushing back against the shell (simplification of air resistance)
 
-    def fGrav(self, mass):
-        return mass * self.gravity
 
     def ballistic(self, v, a):
         dist_maxX = (v ** 2 * np.sin(
             np.deg2rad(2 * a)) / self.gravity)  # equation for horizontal distance covered based on angle and v
         return dist_maxX
-
-    def generateANNParameters(self, train, test):
-        single_test_params = []
-        multi_test_params = []
-
-        for x in range(len(test)):
-            #get the angles needed for test data
-            pass
-        for x in range(len(single_test_params)):
-            #get the angles need for the test data (already calculated, turned into tuples with the other parameters attached
-            pass
-
-
 
 
 class Environment:
@@ -132,28 +126,82 @@ class Environment:
     """
     def __init__(self):
         self.arty = Artillery()
-        self.target = Target()
         self.physics = Physics()
 
-    def learningMethodTarget(self, algo):
-        #change this because I want ANN learning of the function to be sepearte
-        if algo == 'ANN':
-            target = Target(algo)
-            return target
 
-    def learnedParameter(self):
-        '''
-        Return either 'angle', 'power', or 'mass'
-        '''
-        return 'angle'
+    def generate_set(self, size):
+        angles = self.arty.change_angle(size)
+        forces = self.arty.change_force(size)
+        masses = self.arty.change_mass(size)
+        shots = self.arty.shoot(forces, masses)
+        target = Target(size, self.physics, angles, shots)
+        targets = np.asarray(target.generate_targets())
 
-    def learnPhysics(self):
-        '''
-        Generates datasets, trains NN on it, and returns a network that can correctly tell if a target will be hit or
-        not given the input parameters
-        '''
-        algo.ANN(self.arty, self.target, self.physics)
+        angles = (angles - np.mean(angles)) / np.std(angles)
+        forces =(forces - np.mean(forces)) / np.std(forces)
+        masses = (masses - np.mean(masses)) / np.std(masses)
+        targets = (targets - np.mean(targets)) / np.std(targets)
+        shots = (shots - np.mean(shots)) / np.std(shots)
+
+        set = np.zeros((3, size))
+        set[0] = angles
+        set[1] = forces
+        set[2] = masses
+        # set[3] = shots
+        set = set.T
+
+        return set, targets
 
 
+class ANN:
+    def __init__(self, env):
+        self.env = env
+        self.model = Sequential()
+        self.model.add(Dense(units=4, input_dim=3, activation='relu'))
+        # self.model.add(Dropout(0.5))
+        self.model.add(Dense(3, activation='relu'))
+        self.model.add(Dense(3, activation='relu'))
+        self.model.add(Dense(units=1))
+        self.model.compile(loss='mean_squared_error',
+                           optimizer='sgd',
+                           metrics=['accuracy'])
 
-# rewardScaled = 100*((target-abs(target-landed))/target) #get's percentage close to target as a score
+    def generate_data(self, size):
+        self.training, self.training_tgt = self.env.generate_set(size)
+        self.test, self.test_tgt = self.env.generate_set(size)
+
+        # print(self.training[0])
+        # print("AH")
+        # print(self.training[1])
+        # print("SH")
+        # print(self.training[2])
+
+    def learn_physics(self):
+        self.model.fit(self.training, self.training_tgt, batch_size=1, epochs=300, verbose=1, shuffle=False)
+        self.model.evaluate(self.test, self.test_tgt, batch_size=1, verbose=1)
+
+    def predict(self, x):
+        prediction = self.model.predict(x, verbose=1)
+        return prediction
+
+env = Environment()
+network = ANN(env)
+network.generate_data(2)
+
+tester = [60,1000000,10]
+tester = np.asarray(tester)
+tester = np.expand_dims(tester, 0)
+# print(tester.shape)
+
+network.learn_physics()
+
+arty = Artillery()
+shot,ang = arty.shoot(1000000,10)
+phys = Physics()
+dist = phys.ballistic(shot, ang)
+# network.predict(np.array(([60],[1000000],[10])))
+# tester = [60,1000000,10]
+# tester = np.asarray(tester)
+# print(tester.shape)
+pred = network.predict(tester)
+print(dist, 'comes out as',pred)

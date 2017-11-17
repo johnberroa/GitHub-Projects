@@ -264,22 +264,22 @@ class MultiLayerPerceptron:
             self.input = self._add_bias(input)
         print("THE INPUT:\n", self._add_bias(input))
         print("THE WEIGHTS:\n", self.layer_weights[layer])
-        sums = np.dot(self._add_bias(input), self.layer_weights[layer])
+        sums = np.dot(self.input, self.layer_weights[layer])
         print("THE SUMS:\n", sums)
         print("THE SUMS DIMS:\n",sums.shape)
         activation_function = self._get_activation_func(self.layer_activation_funcs[layer])
         # output = []
         output = activation_function(sums)
-        if layer == len(self.layer_sizes)-1:
-            print("ADDING BIAS TO FINAL LAYER")
-            output = self._add_bias(output)
-            sums = self._add_bias(sums)
-            self.layer_logits.append(sums)
-            self.layer_outputs.append(output)
-            print(len(self.layer_outputs))
-        else:
-            self.layer_logits.append(sums)  # used for the backprop step   MAY NOT BE USED????
-            self.layer_outputs.append(output)
+        # if layer == len(self.layer_sizes)-1:
+        #     print("ADDING BIAS TO FINAL LAYER")
+        #     output = self._add_bias(output)
+        #     sums = self._add_bias(sums)
+        #     self.layer_logits.append(sums)
+        #     self.layer_outputs.append(output)
+        #     print(len(self.layer_outputs))
+        # else:
+        self.layer_logits.append(sums)  # used for the backprop step   MAY NOT BE USED????
+        self.layer_outputs.append(output)
         return output
 
 
@@ -305,83 +305,34 @@ class MultiLayerPerceptron:
         # it should be a list of numbers (inputs that were sent through) that it iterates through
         # error = np.mean([.5 * (target - sample) ** 2 for sample in output])
         # shouldn't need to be! the whole batch should be input at once
-        error = .5 * (output - target)**2
+        error = np.sum(.5 * (target - output)**2)
         self.errors.append(error)
         return error
 
 
-    def _backpropagate(self, target):
+    def _backpropagate(self, target, input):
         """
         Backpropagates the error through all the layers in one function call (as opposed to _feedforward which
         must be repeated)
         :param target:
         :return ??????????????????????????:
         """
-        print("BACKPRAAAAAPPPPPPPPPPPPPPP")
-        exclude_bias = self.layer_outputs[-1].T[1:]
-        error = self._calculate_error(exclude_bias, target)
+        error = self._calculate_error(self.layer_outputs[-1], target)  # to record error
         print("ERROR", error)
-
-
-        print('\n\n\n\n')
-        for i in range(len(self.layer_outputs)):
-            print("LAYEROUTPUT",i,':\n',self.layer_outputs[i].shape)
-        print('\n')
-        for i in range(len(self.layer_weights)):
-            print("LAYERWEIGHT",i,':\n',self.layer_weights[i].shape)
-        print('\n')
-        for i in range(len(self.layer_logits)):
-            print("LAYERLOGIT",i,':\n',self.layer_logits[i].shape)
-        print('\nERRORshape', error.shape)
-        print('\n\n\n\n')
-
+        print("BACKPRAAAAAPPPPPPPPPPPPPPP")
+        def last_layer_backprop(tgt):
+            derivative_function = self._get_derivative(self.layer_activation_funcs[-1])
+            delta = -np.dot(self.layer_logits[-2].T, np.multiply((tgt - self.layer_outputs[-1]), derivative_function(self.layer_logits[-1])))
+            return delta
+        def hidden_layer_backprop(tgt, inpt):
+            deltas_backward = []
+            for i in reversed(range(len(self.layer_logits) - 1)): # because we already did the last layer
+                derivative_function = self._get_derivative(self.layer_activation_funcs[i])
+                delta = (tgt - self.layer_outputs[-1])  # this increases in length completely right? so wouldn't it be better to do in in another loop, as parts?
+                deltas_backward.append(delta)
 
 
 
-        deltas_backwards = []
-        last_activation = self.layer_activation_funcs[-1]
-        print("LAST ACTIVATION", last_activation)
-        print("DERIVATIVE", self._get_derivative(last_activation)(self.layer_outputs[-1]), "these should be the same up and down")
-        derivative_function = self._get_derivative(last_activation)
-        derivative_error = self._get_derivative('error')
-        ###lukasapproach
-        GRADIENT = derivative_error(self.layer_outputs[-1], target) * derivative_function(self.layer_outputs[-2] * self.layer_weights[-1]) * self.layer_logits[-2]
-        print(GRADIENT)
-        GRADIENTS = [GRADIENT]
-        #####welch approach
-        # deltas = []
-        # derivs = []
-        # delta = np.multiply(derivative_error(self.layer_outputs[-1], target), derivative_function(self.layer_logits[-1]))
-        # deriv = np.dot(self.layer_outputs[-2].T, delta)
-        # deltas.append(delta)
-        # derivs.append(deriv)
-        if len(self.layer_sizes) > 1:  # if there are no hidden layers, skip this part
-            for layer in reversed(range(len(self.layer_sizes)-1)):  # -1 to not include last layer that was already calced
-                print("LAYER", layer+1,'/', len(self.layer_sizes), "technically layer", layer)
-                derivative_logit = self._get_derivative(self.layer_activation_funcs[layer])
-                ###lukasappraoch
-                print(self.layer_logits[layer].T)
-                print(GRADIENTS[-1])
-                print(self.layer_weights[layer + 1].T)
-                print(derivative_logit(self.layer_logits[layer] * self.layer_weights[layer]))
-                print(self.layer_logits[layer].T.shape)
-                print(GRADIENTS[-1].shape)
-                print(self.layer_weights[layer + 1].T.shape)
-                print(derivative_logit(self.layer_logits[layer] * self.layer_weights[layer]).shape)
-                print(np.dot(self.layer_weights[layer + 1].T, derivative_logit(self.layer_logits[layer] * self.layer_weights[layer])).shape)
-                GRADIENT = self.layer_logits[layer].T * GRADIENTS[-1] * self.layer_weights[
-                    layer + 1].T * derivative_logit(self.layer_logits[layer] * self.layer_weights[layer])
-
-                GRADIENTS.append(GRADIENT)
-                # ###welchapproach
-                # print(deltas[-1].shape)
-                # print(self.layer_weights[layer].T.shape)
-                # print(np.dot(deltas[-1], self.layer_weights[layer].T))
-                # print(derivative_logit(self.layer_logits[layer]))
-                # delta = np.multiply(np.dot(deltas[-1], self.layer_weights[layer].T)*derivative_logit(self.layer_logits[layer]))
-                # deriv = np.dot(self.layer_outputs[layer-1].T, delta)
-                # deltas.append(delta)
-                # derivs.append(deriv)
         print("FERTIG")
         # self._descend_gradient(input, deltas_backwards, changes_backwards)
 
@@ -418,7 +369,7 @@ class MultiLayerPerceptron:
         #PSEUDOCODE
         for r in repitions:
             self._feedforward(input)
-            self._backpropagate(target)
+            self._backpropagate(target, input)
             # self._descend_gradient(x,y,z)
 
     ##############---Training Functions---##############
@@ -505,7 +456,9 @@ if __name__ == "__main__":
     # inputs = np.array([[0,0,1],[1,1,1],[1,0,1],[0,1,1]])
     #start debugging
     inputs = np.array([[0,0],[0,1],[1,0],[1,1]])
+    print(inputs)
     outputs = np.array([[0],[1],[1],[0]])
+    print(outputs)
     NeuralNet = MultiLayerPerceptron('relu',.001,'ones')
     NeuralNet.create_layer(2, 2)
     NeuralNet.create_layer(2)
