@@ -3,7 +3,7 @@
 # ## Purpose
 # To show the principle behind gradient descent by fitting a regression line through data.
 # ## Limitations
-# -The gradients seem to explode with to fast a learning rate
+# -The gradients seem to explode with too fast a learning rate
 # -Complex data sets either take forever to solve, or diverge
 ##################
 
