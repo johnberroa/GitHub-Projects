@@ -26,38 +26,25 @@ class MNIST_Classifier:
     def generate_network(self):
         model = Sequential()
         model.add(Conv2D(self.first_filter, self.kernel, input_shape=self.image_shape,
-                                          strides=(1, 1), padding='valid',
-                                          activation='relu', use_bias=True))
-        model.add(BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001, center=True, scale=True,
-                                                      beta_initializer='zeros', gamma_initializer='ones',
-                                                      moving_mean_initializer='zeros',
-                                                      moving_variance_initializer='ones', beta_regularizer=None,
-                                                      gamma_regularizer=None, beta_constraint=None,
-                                                      gamma_constraint=None))
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=None, padding='valid'))
+                         padding='same', activation='relu'))
+        model.add(BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001))
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2), padding='valid'))
 
-        model.add(Conv2D(self.second_filter, self.kernel,
-                                            strides=(1, 1), padding='valid',
-                                            activation='relu', use_bias=True))
-        model.add(BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001, center=True, scale=True,
-                                                      beta_initializer='zeros', gamma_initializer='ones',
-                                                      moving_mean_initializer='zeros',
-                                                      moving_variance_initializer='ones', beta_regularizer=None,
-                                                      gamma_regularizer=None, beta_constraint=None,
-                                                      gamma_constraint=None))
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=None, padding='valid'))
+        model.add(Conv2D(self.second_filter, self.kernel, padding='same', activation='relu'))
+        model.add(BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001))
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2), padding='valid'))
 
         model.add(Flatten())
-        model.add(Dense(1024, activation='relu', use_bias=True))
+        model.add(Dense(1024, activation='relu'))
         model.add(Dropout(self.dropout_rate))
 
-        model.add(Dense(512, activation='relu', use_bias=True))
+        model.add(Dense(512, activation='relu'))
         model.add(Dropout(self.dropout_rate))
 
         model.add(Dense(10, activation='softmax'))
 
         model.compile(loss=keras.losses.sparse_categorical_crossentropy,
-                      optimizer=keras.optimizers.Adam(lr=.001),
+                      optimizer=keras.optimizers.Adam(),
                       metrics=['accuracy'])
         return model
 
