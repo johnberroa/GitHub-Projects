@@ -5,25 +5,29 @@ import numpy as np
 import cv2
 
 cap = cv2.VideoCapture(0)
-count = 0
-kernel = np.ones((5,5),np.uint8)
+kernel = np.ones((5, 5), np.uint8)
 type = 'c'
 color = 1
 
-def openCam(count, k, type, color):
-    while(True):
+def set_background(frame):
+    return frame, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+def open_cam(k, type, color):
+    frames_passed = 0
+    color_background = None
+    gray_background = None
+    while True:
         # Capture frame-by-frame
         ret, frame = cap.read()
-        if count == 10: #to allow for the camera to adjust exposure
-            c_bg = frame
-            g_bg = cv2.cvtColor(c_bg, cv2.COLOR_BGR2GRAY)
-        count += 1
+        if frames_passed == 10:  # to allow for the camera to adjust exposure
+            color_background, gray_background = set_background(frame)
+        frames_passed += 1
 
         font = cv2.FONT_HERSHEY_PLAIN
         x = 30
         level = 1
         cv2.putText(frame, "Press the following keys for effects:", (10, x), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-        x += (15//2)
+        x += (15 // 2)
         cv2.putText(frame, "'g': Gray", (20, x + (15 * level)), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
         level += 1
         cv2.putText(frame, "'d': Difference image", (20, x + (15 * level)), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
@@ -36,9 +40,14 @@ def openCam(count, k, type, color):
         level += 1
         cv2.putText(frame, "'a': Alien", (20, x + (15 * level)), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
         level += 1
-        cv2.putText(frame, "Type 's' to save image", (10, x + (15 * level + (16//2))), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Type 't' to set background image", (10, x + (15 * level + (16 // 2))), font, 1, (255, 255, 255), 1,
+                    cv2.LINE_AA)
         level += 1
-        cv2.putText(frame, "Type 'q' to quit", (10, x + (15 * level + (16//2))), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Type 's' to save image", (10, x + (15 * level + (16 // 2))), font, 1, (255, 255, 255), 1,
+                    cv2.LINE_AA)
+        level += 1
+        cv2.putText(frame, "Type 'q' to quit", (10, x + (15 * level + (16 // 2))), font, 1, (255, 255, 255), 1,
+                    cv2.LINE_AA)
 
         # Play around with the stream
         if type == 'g':
@@ -47,10 +56,10 @@ def openCam(count, k, type, color):
             cv2.imshow('Stream', frame)
         elif type == 'd':
             if color == 1:
-                frame = simpleDifference(frame, c_bg)
+                frame = simpleDifference(frame, color_background)
             else:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frame = simpleDifference(frame, g_bg)
+                frame = simpleDifference(frame, gray_background)
             cv2.imshow('Stream', frame)
         elif type == 'b':
             if color == 0:
@@ -71,29 +80,31 @@ def openCam(count, k, type, color):
             cv2.imshow('Stream', frame)
         elif type == 'p':
             if color == 1:
-                frame = phantom(frame, c_bg)
+                frame = phantom(frame, color_background)
             else:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frame = phantom(frame, g_bg)
+                frame = phantom(frame, gray_background)
             cv2.imshow('Stream', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        if cv2.waitKey(1) & 0xFF == ord('g'):
+        elif cv2.waitKey(1) & 0xFF == ord('g'):
             type = 'g'
-        if cv2.waitKey(1) & 0xFF == ord('d'):
+        elif cv2.waitKey(1) & 0xFF == ord('d'):
             type = 'd'
-        if cv2.waitKey(1) & 0xFF == ord('b'):
+        elif cv2.waitKey(1) & 0xFF == ord('b'):
             type = 'b'
-        if cv2.waitKey(1) & 0xFF == ord('a'):
+        elif cv2.waitKey(1) & 0xFF == ord('a'):
             type = 'a'
-        if cv2.waitKey(1) & 0xFF == ord('c'):
+        elif cv2.waitKey(1) & 0xFF == ord('c'):
             type = 'c'
-        if cv2.waitKey(1) & 0xFF == ord('p'):
+        elif cv2.waitKey(1) & 0xFF == ord('p'):
             type = 'p'
-        if cv2.waitKey(1) & 0xFF == ord('s'):
-            cv2.imwrite('WebcamFun.jpg', frame)
-
+        elif cv2.waitKey(1) & 0xFF == ord('s'):
+            # Can potentially overwrite previous photos
+            cv2.imwrite(f'WebcamFun-{frames_passed}.jpg', frame)
+        elif cv2.waitKey(1) & 0xFF == ord('t'):
+            color_background, gray_background = set_background(frame)
 
     # When everything done, release the capture
     cap.release()
@@ -103,12 +114,13 @@ def openCam(count, k, type, color):
 def simpleDifference(img1, img2):
     epsilon = 80
     diffImg = cv2.absdiff(img1, img2)
-    _, diffImg = cv2.threshold(diffImg,epsilon,255,cv2.THRESH_BINARY)
+    _, diffImg = cv2.threshold(diffImg, epsilon, 255, cv2.THRESH_BINARY)
     return diffImg
+
 
 def phantom(img1, img2):
     diffImg = cv2.absdiff(img1, img2)
     return diffImg
 
 
-openCam(count, kernel, type, color)
+open_cam(kernel, type, color)
